@@ -513,13 +513,16 @@ static int identify_local_keyboard(XWindowsScreen_t * screen)
         if (device->use != XISlaveKeyboard)
             continue;
 
-        /* We're only interested in keyboards which are presented as keyboards too! */
-        if (strcasestr(device->name, "keyboard") == 0 )
+        if (strcmp(device->name, "Microsoft Microsoft® 2.4GHz Transceiver v9.0") != 0)
             continue;
 
+        /* We're only interested in keyboards which are presented as keyboards too! */
+        // if (strcasestr(device->name, "keyboard") == 0 )
+            // continue;
+
         /* And I'm afraid we aren't going to deal with anything which isn't real... */
-        if (strcasestr(device->name, "virtual") != 0 )
-            continue;
+        // if (strcasestr(device->name, "virtual") != 0 )
+            // continue;
 
         /* However, If we have come this far, we likely have a keyboard! */
         keyboard_id = device->deviceid;
