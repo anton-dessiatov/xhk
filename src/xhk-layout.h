@@ -35,6 +35,7 @@ enum EN_GB_LAYOUT {
     KEY_0,
 
     KEY_MINUS = 20,
+    KEY_EQUALS = 21,
     KEY_BACKSPACE = 22,
     KEY_TAB = 23,
 
@@ -49,6 +50,8 @@ enum EN_GB_LAYOUT {
     KEY_O,
     KEY_P,
 
+    KEY_LBRACKET = 34,
+    KEY_RBRACKET = 35,
     KEY_ENTER = 36,
     KEY_CTRL  = 37,
 
@@ -83,6 +86,12 @@ enum EN_GB_LAYOUT {
 
     KEY_SPACE = 65,
     KEY_CAPS = 66,
+
+    KEY_ARROW_UP = 111,
+    KEY_ARROW_LEFT = 113,
+    KEY_ARROW_RIGHT = 114,
+    KEY_ARROW_DOWN = 116,
+    KEY_SUPER_L = 133,
 };
 
 

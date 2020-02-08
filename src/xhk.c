@@ -233,78 +233,115 @@ static int SendKey(XWindowsScreen_t * screen, int keycode, int key_down, unsigne
     return ret;
 }
 
-int mirror_key(int keycode)
+int mirror_key(int keycode, int modifier)
 {
-    /************************
-    * Half-Key heavily based on code by John Meacham
-    * john@foo.net
-    * Adapted for X Keycodes, special cases and extra rows.
-    ***********************/
-    int t=0;
-
-    if(keycode >= KEY_1 && keycode <= KEY_0) t = KEY_1; // numbers
-    if(keycode >= KEY_Q && keycode <= KEY_P) t = KEY_Q; // top row
-    if(keycode >= KEY_A && keycode <= KEY_SEMICOLON) t = KEY_A; // middle row
-    if(keycode >= KEY_Z && keycode <= KEY_FSLASH) t = KEY_Z; // bottom row
-    if(t) {
-        int temp = keycode;
-        temp -=t+4;
-        if(temp < 1) temp--;
-        temp = -temp;
-        if(temp < 1) temp++;
-        temp +=t+4;
-        keycode = temp;
+    if (modifier == -1) {
+        modifier = 0;
     }
 
-    /* Swap special cases */
-    switch(keycode) {
-    case KEY_BACKSPACE:
-        keycode = KEY_TAB;
-        break;
-    case KEY_TAB:
-        keycode = KEY_BACKSPACE;
-        break;
+    if (modifier == 0) {
+        /************************
+        * Half-Key heavily based on code by John Meacham
+        * john@foo.net
+        * Adapted for X Keycodes, special cases and extra rows.
+        ***********************/
+        int t=0;
 
-    case KEY_ENTER:
-        keycode = KEY_CAPS;
-        break;
-    case KEY_CAPS:
-        keycode = KEY_ENTER;
-        break;
+        if(keycode >= KEY_1 && keycode <= KEY_0) t = KEY_1; // numbers
+        if(keycode >= KEY_Q && keycode <= KEY_P) t = KEY_Q; // top row
+        if(keycode >= KEY_A && keycode <= KEY_SEMICOLON) t = KEY_A; // middle row
+        if(keycode >= KEY_Z && keycode <= KEY_FSLASH) t = KEY_Z; // bottom row
+        if(t) {
+            int temp = keycode;
+            temp -=t+4;
+            if(temp < 1) temp--;
+            temp = -temp;
+            if(temp < 1) temp++;
+            temp +=t+4;
+            keycode = temp;
+        }
 
-    case KEY_MINUS:
-        keycode = KEY_GRAVE;
-        break;
-    case KEY_GRAVE:
-        keycode = KEY_MINUS;
-        break;
+        /* Swap special cases */
+        switch(keycode) {
+        case KEY_BACKSPACE:
+            keycode = KEY_TAB;
+            break;
+        case KEY_TAB:
+            keycode = KEY_BACKSPACE;
+            break;
+
+        case KEY_ENTER:
+            keycode = KEY_CAPS;
+            break;
+        case KEY_CAPS:
+            keycode = KEY_ENTER;
+            break;
+
+        case KEY_MINUS:
+            keycode = KEY_GRAVE;
+            break;
+        case KEY_GRAVE:
+            keycode = KEY_MINUS;
+            break;
+        }
     }
 
+    if (modifier == 1) {
+        switch (keycode) {
+            case KEY_GRAVE:
+            case KEY_1:
+            case KEY_2:
+                keycode = KEY_EQUALS;
+                break;
+            case KEY_TAB:
+                keycode = KEY_BSLASH;
+                break;
+            case KEY_Q:
+                keycode = KEY_RBRACKET;
+                break;
+            case KEY_W:
+                keycode = KEY_LBRACKET;
+                break;
+            case KEY_Z:
+                keycode = KEY_ARROW_LEFT;
+                break;
+            case KEY_X:
+                keycode = KEY_ARROW_DOWN;
+                break;
+            case KEY_C:
+                keycode = KEY_ARROW_RIGHT;
+                break;
+            case KEY_S:
+                keycode = KEY_ARROW_UP;
+                break;
+        }
+    }
     return keycode;
 }
 
-#define SPACE_STATE_START    0
-#define SPACE_STATE_PRESSED  1
-#define SPACE_STATE_MODIFIED 2
+#define MODIFIER_STATE_START    0
+#define MODIFIER_STATE_PRESSED  1
+#define MODIFIER_STATE_MODIFIED 2
 
-char * SpaceStateNames[] = {
+char * ModifierStateNames[] = {
     "Start",
     "Pressed",
     "Modified",
 };
 
-static int space = SPACE_STATE_START;
+static int modifierKeys[] = { KEY_SPACE, KEY_SUPER_L };
+static int modifiers[] = { MODIFIER_STATE_START, MODIFIER_STATE_START };
 
 int ProcessKeycode(XWindowsScreen_t * screen, int keycode, int up_flag)
 {
     int mirrored_key;
     bool mirrored;
 
-    DEBUG("Entering ProcessKeycode in state %s\n", SpaceStateNames[space]);
+    DEBUG("Entering ProcessKeycode in state %s %s\n", ModifierStateNames[modifiers[0]], ModifierStateNames[modifiers[1]]);
 
     /* MirrorMode mirrors all keys before the state machine operates */
     if (MirrorMode)
-        keycode = mirror_key(keycode);
+        keycode = mirror_key(keycode, 0);
 
     /*
      * SPACE State Table
@@ -324,55 +361,70 @@ int ProcessKeycode(XWindowsScreen_t * screen, int keycode, int up_flag)
      * 			-> Start	-> Pressed	-> Modified
      */
 
-    if(keycode == KEY_SPACE) {
-        switch(space) {
-        case SPACE_STATE_START:
-            space = SPACE_STATE_PRESSED;
+    int modifierIndex = -1;
+    for (int i = 0; i < sizeof(modifierKeys) / sizeof(modifierKeys[0]); ++i){
+        if (modifierKeys[i] == keycode) {
+            modifierIndex = i;
+            break;
+        }
+    }
+    if(modifierIndex != -1) {
+        switch(modifiers[modifierIndex]) {
+        case MODIFIER_STATE_START:
+            modifiers[modifierIndex] = MODIFIER_STATE_PRESSED;
             return -1; /* Change state but swallow the Space Input Event */
-        case SPACE_STATE_PRESSED:
+        case MODIFIER_STATE_PRESSED:
             if(up_flag) {
                 /* Space released before any other key */
                 /* We discarded the original Space Down event, so provide one now */
                 SendKey(screen, keycode, true, CurrentTime);
-                space = SPACE_STATE_START;
+                modifiers[modifierIndex] = MODIFIER_STATE_START;
                 return keycode; /* Space bar released, allow it to be pressed */
             } else
                 return -1; /* Ignore and swallow repeated space down events */
             break;
-        case SPACE_STATE_MODIFIED:
+        case MODIFIER_STATE_MODIFIED:
             if(up_flag)
-                space = SPACE_STATE_START;
+                modifiers[modifierIndex] = MODIFIER_STATE_START;
             return -1;
         }
     }
 
+    int modifierInEffect = -1;
+    for (int i = 0; i < sizeof(modifiers) / sizeof(modifiers[0]); ++i){
+        if (modifiers[i] != MODIFIER_STATE_START) {
+            modifierInEffect = i;
+            break;
+        }
+    }
     /* Mirror the key once to prevent excess checking */
-    mirrored_key = mirror_key(keycode);
+    mirrored_key = mirror_key(keycode, modifierInEffect);
     /* Determine if the key was modified by our mirror - Not all keys flip */
     mirrored = (mirrored_key != keycode);
 
     /* Only change state if this action would mirror a key */
-    if( mirrored && (space != SPACE_STATE_START) ) {
-        space = SPACE_STATE_MODIFIED; /* Space bar can no longer insert a space char */
+    // if( mirrored && (modifierInEffect != -1) ) {
+    if( modifierInEffect != -1) {
+        modifiers[modifierInEffect] = MODIFIER_STATE_MODIFIED; /* Space bar can no longer insert a space char */
         keycode = mirrored_key;
     }
 
     /* Allow the user to 'cancel' a modifier without performing any further action */
-    if(keycode == KEY_ESC && space != SPACE_STATE_START) {
-        space = SPACE_STATE_MODIFIED;
+    if(keycode == KEY_ESC && modifierInEffect != -1) {
+        modifiers[modifierInEffect] = MODIFIER_STATE_MODIFIED;
         return -1;
     }
 
     /* Verify that we are only releasing keys that we pressed */
-    if (up_flag && keystates[keycode] == KEYSTATE_UP) { /* Perhaps this was the wrong key */
-        int mirror = mirror_key(keycode);
+    if (up_flag && modifierInEffect != -1 && keystates[keycode] == KEYSTATE_UP) { /* Perhaps this was the wrong key */
+        int mirror = mirror_key(keycode, modifierInEffect);
         if (keystates[mirror] == KEYSTATE_DOWN) {
             DEBUG("StateInversion: Releasing key %s instead of %s\n", keycode_to_char(screen, mirror), keycode_to_char(screen, keycode));
             keycode = mirror; /* We will 'up' this key instead */
 
             /* because of the inversion, we take the SPACE state back a level */
-            if (space == SPACE_STATE_MODIFIED)
-                space = SPACE_STATE_PRESSED;
+            if (modifiers[modifierInEffect] == MODIFIER_STATE_MODIFIED)
+                modifiers[modifierInEffect] = MODIFIER_STATE_PRESSED;
         }
     }
 
@@ -621,93 +673,6 @@ void install_signal_handlers(void)
     signal(SIGINT, handle_signal);
 }
 
-int KeycodeTest(XWindowsScreen_t * screen, int keycode, int up_flag, int expected, int expected_state)
-{
-    int returned_code = ProcessKeycode(screen, keycode, up_flag);
-
-    if (returned_code != expected)
-        ERROR("ProcessKeyCode for %d (%s) returned %d {%s} but expected %d {%s}\n", keycode, up_flag ? "Up" : "Down",
-              returned_code, keycode_to_char(screen, returned_code), expected, keycode_to_char(screen, expected));
-
-    if (space != expected_state)
-        ERROR("ProcessKeyCode for %d (%s %s) returned in state %d {%s} but expected state %d {%s}\n",
-              keycode, keycode_to_char(screen, keycode), up_flag ? "Up" : "Down",
-              space, SpaceStateNames[space], expected_state, SpaceStateNames[expected_state]);
-
-    return (returned_code != expected);
-}
-
-#define UPFLAG_KEYDOWN 0
-#define UPFLAG_KEYUP 1
-
-int xlib_test(void)
-{
-    int errors = 0;
-
-    XWindowsScreen_t * screen = construct();
-
-    if (screen->display == NULL) {
-        ERROR("Couldn't connect to XServer\n");
-        return -1;
-    }
-
-    /* Which version of XI2? We support 2.0 */
-    int major = 2, minor = 0;
-    if (XIQueryVersion(screen->display, &major, &minor) == BadRequest) {
-        printf("XI2 not available. Server supports %d.%d\n", major, minor);
-        return -1;
-    }
-
-    INFO("XI Version %d.%d\n", major, minor);
-
-    fflush(stdout);
-
-    INFO("Entering Test Loop...\n");
-
-    DEBUG("Check a key returns as expected\n");
-    errors += KeycodeTest(screen, KEY_0, UPFLAG_KEYDOWN, KEY_0, SPACE_STATE_START);
-    errors += KeycodeTest(screen, KEY_0, UPFLAG_KEYUP, KEY_0, SPACE_STATE_START);
-
-
-    DEBUG("\nCheck space works alone\n");
-    errors += KeycodeTest(screen, KEY_SPACE, UPFLAG_KEYDOWN, -1, SPACE_STATE_PRESSED);
-    errors += KeycodeTest(screen, KEY_SPACE, UPFLAG_KEYUP, KEY_SPACE, SPACE_STATE_START);
-    /* If we expect a space - it gets sent by the state machine, so we have to cancel it out */
-    SendKey(screen, KEY_SPACE, KEYSTATE_UP, CurrentTime);
-
-    DEBUG("\nVerify a key gets mirrored\n");
-    errors += KeycodeTest(screen, KEY_SPACE, UPFLAG_KEYDOWN, -1, SPACE_STATE_PRESSED);
-    errors += KeycodeTest(screen, KEY_F, UPFLAG_KEYDOWN, KEY_J, SPACE_STATE_MODIFIED);
-    errors += KeycodeTest(screen, KEY_F, UPFLAG_KEYUP, KEY_J, SPACE_STATE_MODIFIED);
-    errors += KeycodeTest(screen, KEY_SPACE, UPFLAG_KEYUP, -1, SPACE_STATE_START);
-    /* If we expect a space - it gets sent by the state machine, so we have to cancel it out */
-    SendKey(screen, KEY_SPACE, KEYSTATE_UP, CurrentTime);
-
-    DEBUG("\nVerify a non-mirrored key doesn't break the space bar\n");
-    errors += KeycodeTest(screen, KEY_SPACE, UPFLAG_KEYDOWN, -1, SPACE_STATE_PRESSED);
-    errors += KeycodeTest(screen, KEY_LSHIFT, UPFLAG_KEYDOWN, KEY_LSHIFT, SPACE_STATE_PRESSED);
-    errors += KeycodeTest(screen, KEY_LSHIFT, UPFLAG_KEYUP, KEY_LSHIFT, SPACE_STATE_PRESSED);
-    errors += KeycodeTest(screen, KEY_SPACE, UPFLAG_KEYUP, KEY_SPACE, SPACE_STATE_START);
-
-    DEBUG("\nVerify pressing paired mirror keys sequentially still works\n");
-    errors += KeycodeTest(screen, KEY_F, UPFLAG_KEYDOWN, KEY_F, SPACE_STATE_START);
-    errors += KeycodeTest(screen, KEY_J, UPFLAG_KEYDOWN, KEY_J, SPACE_STATE_START);
-    errors += KeycodeTest(screen, KEY_F, UPFLAG_KEYUP, KEY_F, SPACE_STATE_START);
-    errors += KeycodeTest(screen, KEY_J, UPFLAG_KEYUP, KEY_J, SPACE_STATE_START);
-    /* Try the other way too */
-    errors += KeycodeTest(screen, KEY_R, UPFLAG_KEYDOWN, KEY_R, SPACE_STATE_START);
-    errors += KeycodeTest(screen, KEY_U, UPFLAG_KEYDOWN, KEY_U, SPACE_STATE_START);
-    errors += KeycodeTest(screen, KEY_U, UPFLAG_KEYUP, KEY_U, SPACE_STATE_START);
-    errors += KeycodeTest(screen, KEY_R, UPFLAG_KEYUP, KEY_R, SPACE_STATE_START);
-
-    INFO("\nExiting Test Loop with %d errors...\n", errors);
-
-    XCloseDisplay(screen->display);
-
-    return 0;
-}
-
-
 int main(int argc, char **argv)
 {
     char opt;
@@ -727,10 +692,6 @@ int main(int argc, char **argv)
             exit(0);
         case 'm':
             MirrorMode = true;
-            break;
-        case 't':
-            xlib_test();
-            exit(0);
             break;
         default:
             usage();
