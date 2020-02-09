@@ -419,15 +419,18 @@ int ProcessKeycode(XWindowsScreen_t * screen, int keycode, int up_flag)
     }
 
     /* Verify that we are only releasing keys that we pressed */
-    if (up_flag && modifierInEffect != -1 && keystates[keycode] == KEYSTATE_UP) { /* Perhaps this was the wrong key */
-        int mirror = mirror_key(keycode, modifierInEffect);
-        if (keystates[mirror] == KEYSTATE_DOWN) {
-            DEBUG("StateInversion: Releasing key %s instead of %s\n", keycode_to_char(screen, mirror), keycode_to_char(screen, keycode));
-            keycode = mirror; /* We will 'up' this key instead */
+    if (up_flag && keystates[keycode] == KEYSTATE_UP) { /* Perhaps this was the wrong key */
+        for (int modifierGuess = 0; modifierGuess < sizeof(modifiers) / sizeof(modifiers[0]); ++modifierGuess) {
+            int mirror = mirror_key(keycode, modifierGuess);
 
-            /* because of the inversion, we take the SPACE state back a level */
-            if (modifiers[modifierInEffect] == MODIFIER_STATE_MODIFIED)
-                modifiers[modifierInEffect] = MODIFIER_STATE_PRESSED;
+            if (keystates[mirror] == KEYSTATE_DOWN) {
+                DEBUG("StateInversion: Releasing key %s instead of %s\n", keycode_to_char(screen, mirror), keycode_to_char(screen, keycode));
+                keycode = mirror; /* We will 'up' this key instead */
+
+                /* because of the inversion, we take the SPACE state back a level */
+                if (modifiers[modifierGuess] == MODIFIER_STATE_MODIFIED)
+                    modifiers[modifierGuess] = MODIFIER_STATE_PRESSED;
+            }
         }
     }
 
