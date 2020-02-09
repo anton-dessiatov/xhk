@@ -68,6 +68,7 @@ enum EN_GB_LAYOUT {
     KEY_AT,
     KEY_HASH,
 
+    KEY_APOSTROPHE = 48,
     KEY_GRAVE = 49,
     KEY_LSHIFT = 50,
     KEY_BSLASH = 51,

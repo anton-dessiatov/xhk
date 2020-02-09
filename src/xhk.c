@@ -317,6 +317,9 @@ int mirror_key(int keycode, int modifier)
             case KEY_X:
                 keycode = KEY_COMMA;
                 break;
+            case KEY_CAPS:
+                keycode = KEY_APOSTROPHE;
+                break;
         }
     }
     return keycode;
