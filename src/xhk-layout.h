@@ -84,6 +84,10 @@ enum EN_GB_LAYOUT {
     KEY_FSLASH,
     KEY_RSHIFT,
 
+    KEY_F1 = 67,
+    KEY_F2 = 68,
+    KEY_F3 = 69,
+
     KEY_SPACE = 65,
     KEY_CAPS = 66,
 

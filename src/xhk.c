@@ -283,6 +283,15 @@ int mirror_key(int keycode, int modifier)
         case KEY_GRAVE:
             keycode = KEY_MINUS;
             break;
+        case KEY_F1:
+            keycode = KEY_LBRACKET;
+            break;
+        case KEY_F2:
+            keycode = KEY_RBRACKET;
+            break;
+        case KEY_F3:
+            keycode = KEY_BSLASH;
+            break;
         }
     }
 
@@ -293,26 +302,20 @@ int mirror_key(int keycode, int modifier)
             case KEY_2:
                 keycode = KEY_EQUALS;
                 break;
-            case KEY_TAB:
-                keycode = KEY_BSLASH;
-                break;
-            case KEY_Q:
-                keycode = KEY_RBRACKET;
-                break;
-            case KEY_W:
-                keycode = KEY_LBRACKET;
-                break;
-            case KEY_Z:
+            case KEY_A:
                 keycode = KEY_ARROW_LEFT;
                 break;
-            case KEY_X:
+            case KEY_S:
                 keycode = KEY_ARROW_DOWN;
                 break;
-            case KEY_C:
+            case KEY_D:
                 keycode = KEY_ARROW_RIGHT;
                 break;
-            case KEY_S:
+            case KEY_W:
                 keycode = KEY_ARROW_UP;
+                break;
+            case KEY_X:
+                keycode = KEY_COMMA;
                 break;
         }
     }
